@@ -1,0 +1,87 @@
+---
+- name: HAproxy
+  hosts: all
+  become: yes
+  tasks:
+    - name: upadte packages and install apache2
+      ansible.builtin.apt:
+        name: apache2
+        state: present
+        update_cache: yes
+      when:
+        - ansible_facts["nodename"] != "ip-172-31-24-224"
+    - name: copy
+      ansible.builtin.copy:
+        src: index.html
+        dest: /var/www/html/index.html
+      when:
+        - ansible_facts["nodename"] == "ip-172-31-19-120"
+    - name: copy
+      ansible.builtin.copy:
+        src: index2.html
+        dest: /var/www/html/index.html
+      when:
+        - ansible_facts["nodename"] == "ip-172-31-29-254"
+    - name: start service
+      ansible.builtin.systemd:
+        name: apache2
+        state: started
+        enabled: yes
+      when:
+        - ansible_facts["nodename"] != "ip-172-31-24-224"
+    - name: copy to /etc/hosts
+      ansible.builtin.copy:
+        content: 'HAproxy 172.31.24.224'
+        dest: /etc/hosts
+      when:
+        - ansible_facts["nodename"] != "ip-172-31-24-224"
+    - name: copy to /etc/hosts on HAproxy
+      ansible.builtin.copy:
+        src: hostfile
+        dest: /etc/hosts
+      when:
+        - ansible_facts["nodename"] == "ip-172-31-24-224"
+    - name: install haproxy
+      ansible.builtin.apt:
+        name: haproxy
+        state: present
+        update_cache: yes
+      when:
+        - ansible_facts["nodename"] == "ip-172-31-24-224"
+    - name: copy content to /etc/haproxy/haproxy.cfg
+      ansible.builtin.blockinfile:
+        block: "{{ lookup('file','./haproxy.cfg') }}"
+        path: /etc/haproxy/haproxy.cfg
+        create: yes
+        state: present
+      when:
+        - ansible_facts["nodename"] == "ip-172-31-24-224"
+    - name: start service
+      ansible.builtin.systemd:
+        name: haproxy
+        state: restarted
+        enabled: yes
+      when:
+        - ansible_facts["nodename"] == "ip-172-31-24-224"
+
+/* frontend web-frontend
+   bind 172.31.24.224:80
+   mode http
+   default_backend web-backend
+backend web-backend
+   balance roundrobin
+   server web-server1 172.31.19.120:80 check
+   server web-server2 172.31.29.254:80 check
+listen stats
+bind 172.31.24.224:8080
+mode http
+option forwardfor
+option httpclose
+stats enable
+stats show-legends
+stats refresh 5s
+stats uri /stats
+stats realm Haproxy\ Statistics
+stats auth ubuntu:ubuntu            #Login User and Password for the monitoring
+stats admin if TRUE
+default_backend web-backend /*

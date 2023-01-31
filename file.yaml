@@ -1,36 +1,4 @@
 ---
-- name: installing apache and php
-  become: yes
-  hosts: all
-  tasks:
-    - name: install apache and update ubuntu packages
-      ansible.builtin.apt:
-        name: apache2
-        update_cache: yes
-        state: present
-    - name: install php packages
-      ansible.builtin.apt:
-        name:
-        - php
-        - libapache2-mod-php
-        state: present
-    - name: copy the info.php
-      ansible.builtin.copy:
-       name: php
-       src: info.php
-       dest: /var/www/my_page/index.html
-    - name: ensure the apache service is running and enabled
-      ansible.builtin.systemd:
-        name: apache2
-        enabled: yes
-        state: started
-
-
-
-        
-
-
----
 - name: installing wildfly(JBOSS)
   become: yes
   hosts: all
@@ -48,7 +16,7 @@
     - name: Create Folder
       ansible.builtin.file:
         path: /opt/wildfly
-        mode: "0755"
+        mode: "0777"
         state: directory
     - name: Unarchive a file that is already on the remote machine
       ansible.builtin.unarchive:
@@ -59,54 +27,55 @@
       ansible.builtin.group:
         name: wildfly
         state: present
-    - name: Add the user 'johnd' with a specific uid and a primary group of 'admin'
+    - name: Add the user 'tinku' with a specific uid and a primary group of 'wildfly'
       ansible.builtin.user:
-        name: rk
-        comment: rk
-        uid: 1040
+        name: tinku
+        comment: wildfly user
+        uid: 8873
         group: wildfly
     - name: Create Folder
       ansible.builtin.file:
         path: /etc/wildfly
-        mode: 0755
-      state: directory
+        mode: 0777
+        state: directory
+    - name: Change file ownership, group and permissions
+      ansible.builtin.file:
+        path: /opt/wildfly
+        owner: tinku
+        group: wildfly
+        mode: '0777'
     - name: Copy file with owner and permissions
       ansible.builtin.copy:
-        src: /opt/wildfly/docs/contrib/scripts/systemd/wildfly.conf
+        src: /opt/wildfly/wildfly-25.0.1.Final/docs/contrib/scripts/systemd/wildfly.conf
         dest: /etc/wildfly/
-        owner: wildfly
+        owner: tinku
         group: wildfly
         mode: '0777'
         remote_src: yes
     - name: Copy file with owner and permissions
       ansible.builtin.copy:
-        src: /opt/wildfly/docs/contrib/scripts/systemd/wildfly.service
+        src: /opt/wildfly/wildfly-25.0.1.Final/docs/contrib/scripts/systemd/wildfly.service
         dest: /etc/systemd/system/
-        owner: wildfly
+        owner: tinku
         group: wildfly
         mode: '0777'
         remote_src: yes
     - name: Copy file with owner and permissions
       ansible.builtin.copy:
-        src: /opt/wildfly/docs/contrib/scripts/systemd/launch.sh
+        src: /opt/wildfly/wildfly-25.0.1.Final/docs/contrib/scripts/systemd/launch.sh
         dest: /opt/wildfly/bin/
-        owner: wildfly
+        owner: tinku
         group: wildfly
         mode: '0777'
         remote_src: yes
     - name: Change file ownership, group and permissions
       ansible.builtin.file:
         path: /opt/wildfly/bin/launch.sh
-        owner: wildfly
+        owner: tinku
         group: wildfly
         mode: '0777'
     - name: ensure the apache service is running and enabled
       ansible.builtin.systemd:
-        name: wildfly.service
-        state: restarted
-        daemon_reload: yes
-    - name: Start a service with systemd
-      systemd:
         name: wildfly.service
         state: restarted
         daemon_reload: yes

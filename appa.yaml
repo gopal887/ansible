@@ -1,0 +1,22 @@
+---
+- name: installing apache and php
+  become: yes
+  hosts: all
+  tasks:
+   - name: install apache2 and update packages
+     ansible.builtin.apt:
+      name: apache2
+      state: present
+   - name: install php packages
+     ansible.builtin.apt:
+      name: php libapache2-mod-php
+      state: present
+   - name: Copy file with owner and permissions
+     ansible.builtin.copy:
+      src:  info.php
+      dest: /var/www/your_dog/index.html
+   - name: ensure the apache service is running and enabled
+     ansible.builtin.systemd:
+      name: apache
+      state: started
+      enabled: yes
